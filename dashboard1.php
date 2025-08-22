@@ -1,79 +1,66 @@
 <?php
 session_start();
 
-if (!isset($_SESSION['username'])) {
-    header('Location: login.php');
+if (!isset($_SESSION['user_id'])) {
+    
+    header('Location: ../login.php'); 
     exit();
 }
 
 
-$conn = new mysqli('localhost', 'root', '', 'bill_reminder470');
-
-
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
-
+require_once __DIR__ . '/../db.php'; 
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $title = $_POST['title'];
-    $amount = $_POST['amount'];
-    $due_date = $_POST['due_date'];
-    
-    
-    $sql = "INSERT INTO bills (title, amount, due_date) VALUES ('$title', '$amount', '$due_date')";
-    $conn->query($sql);
+    $name = trim($_POST['name'] ?? '');
+    $desc = trim($_POST['description'] ?? '');
+    $error = '';
+
+    if ($name === '') {
+        $error = "Category name is required.";
+    } else {
+        $loggedInUserId = $_SESSION['user_id'];
+
+        $stmt = $conn->prepare("INSERT INTO categories (name, description, user_id) VALUES (?, ?, ?)");
+        $stmt->bind_param("ssi", $name, $desc, $loggedInUserId); 
+
+        if ($stmt->execute()) {
+            
+            header('Location: view_categories.php?msg=Category+added');
+            exit();
+        } else {
+            $error = "Error adding category.";
+        }
+        $stmt->close();
+    }
 }
-
-
-if (isset($_GET['delete'])) {
-    $id = $_GET['delete'];
-    $conn->query("DELETE FROM bills WHERE id=$id");
-}
-
-
-$result = $conn->query("SELECT * FROM bills");
 ?>
-
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Dashboard</title>
+    <meta charset="UTF-8">
+    <title>Add Category</title>
 </head>
 <body>
-    <h2>Welcome, <?php echo htmlspecialchars($_SESSION['username']); ?>!</h2>
-    <p><a href="logout.php">Logout</a></p>
+<div class="container mt-4">
+    <h2>Add New Category</h2>
     
-    <h3>Add New Bill</h3>
-    <form method="POST" action="">
-        Title: <input type="text" name="title" required><br><br>
-        Amount: <input type="number" step="0.01" name="amount" required><br><br>
-        Due Date: <input type="date" name="due_date" required><br><br>
-        <input type="submit" value="Add Bill">
+    <a href="view_categories.php">← Back to Categories</a>
+    <hr>
+    
+    <?php if (!empty($error)): ?>
+        <p style="color:red;"><?= htmlspecialchars($error) ?></p>
+    <?php endif; ?>
+    
+    
+    <form method="post">
+        <label>Name:<br>
+            <input type="text" name="name" required>
+        </label><br><br>
+        <label>Description:<br>
+            <textarea name="description"></textarea>
+        </label><br><br>
+        <button type="submit">Add Category</button>
     </form>
-
-    <h3>All Bills</h3>
-    <table border="1" cellpadding="8">
-        <tr>
-            <th>ID</th>
-            <th>Title</th>
-            <th>Amount</th>
-            <th>Due Date</th>
-            <th>Status</th>
-            <th>Action</th>
-        </tr>
-        <?php while ($row = $result->fetch_assoc()) { ?>
-        <tr>
-            <td><?php echo $row['id']; ?></td>
-            <td><?php echo $row['title']; ?></td>
-            <td><?php echo $row['amount']; ?></td>
-            <td><?php echo $row['due_date']; ?></td>
-            <td><?php echo $row['status']; ?></td>
-            <td>
-                <a href="?delete=<?php echo $row['id']; ?>" onclick="return confirm('Delete this bill?');">Delete</a>
-            </td>
-        </tr>
-        <?php } ?>
-    </table>
+</div>
 </body>
 </html>
