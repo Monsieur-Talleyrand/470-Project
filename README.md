@@ -27,7 +27,7 @@ delete_bill.php – Deletes a bill by ID.
 db.php- the database (used basic mysql here which will be further improved)
 
 logout.php - simple logout
-
+S2: Added categories section 
 # System Used
 PHP 7.4+
 
